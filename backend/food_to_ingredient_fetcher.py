@@ -16,9 +16,15 @@ CREATE TABLE IF NOT EXISTS food_map (
 conn.commit()
 
 def get_from_db(food):
-    cursor.execute("SELECT ingredients FROM food_map WHERE food = ?", (food.lower(),))
-    result = cursor.fetchone()
-    return result[0].split(", ") if result else None
+    food = food.lower()
+    with sqlite3.connect("food_ingredients.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT ingredients FROM food_map
+            WHERE LOWER(food) = ? OR LOWER(translated_food) = ?
+        """, (food, food))
+        result = cursor.fetchone()
+        return result[0].split(", ") if result else None
 
 def save_to_db(food, ingredients):
     cursor.execute("REPLACE INTO food_map (food, ingredients) VALUES (?, ?)", (food.lower(), ", ".join(ingredients)))

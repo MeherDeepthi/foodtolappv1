@@ -16,6 +16,9 @@ df_csv_filtered = df_csv[["name", "ingredients"]].dropna()
 conn = sqlite3.connect("../backend/food_ingredients.db")
 cursor = conn.cursor()
 
+# # Drop old table if it exists (fix schema issues)
+# cursor.execute("DROP TABLE IF EXISTS food_map")
+
 # Create the table if not exists
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS food_map (
