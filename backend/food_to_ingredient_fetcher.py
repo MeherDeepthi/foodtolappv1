@@ -19,10 +19,17 @@ def get_from_db(food):
     food = food.lower()
     with sqlite3.connect("food_ingredients.db") as conn:
         cursor = conn.cursor()
+        # cursor.execute("""
+        #     SELECT ingredients FROM food_map
+        #     WHERE LOWER(food) = ? OR LOWER(translated_food) = ?
+        # """, (food, food)) # translated_food error
         cursor.execute("""
             SELECT ingredients FROM food_map
-            WHERE LOWER(food) = ? OR LOWER(translated_food) = ?
-        """, (food, food))
+            WHERE LOWER(food) = ?
+        """, (food,))
+
+        
+        
         result = cursor.fetchone()
         return result[0].split(", ") if result else None
 

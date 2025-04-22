@@ -4,6 +4,7 @@ import pandas as pd
 import requests
 import datetime
 import sqlite3
+import os
 
 st.set_page_config(page_title="Food Symptom Tracker", layout="centered")
 st.title("🥗 Meal Logger & Trigger Predictor")
@@ -46,7 +47,8 @@ if st.button("🔍 Predict Symptoms") and food:
 
             # Save log to SQLite
             try:
-                conn = sqlite3.connect("C:/Users/mmdee/OneDrive/Desktop/Data Science/projects/foodtolappv1/backend/meal_logs.db")
+                DB_PATH = os.path.join(os.path.dirname(__file__), "meal_logs.db")
+                conn = sqlite3.connect(DB_PATH)
                 cursor = conn.cursor()
                 cursor.execute("""
                     INSERT INTO meal_logs (
@@ -63,7 +65,7 @@ if st.button("🔍 Predict Symptoms") and food:
                     summary["Ingredients"],
                     summary.get("Bloating", ""),
                     summary.get("Bloating_Triggers", ""),
-                    summary.get("Abdominal Pain", summary.get("Abdominal_Pain", "")),
+                    summary.get("Abdominal_Pain", ""),
                     summary.get("Abdominal_Pain_Triggers", ""),
                     summary.get("Diarrhea", ""),
                     summary.get("Diarrhea_Triggers", ""),
@@ -85,7 +87,8 @@ if st.button("🔍 Predict Symptoms") and food:
 st.subheader("2. Symptom Trends and Triggers")
 if st.button("📊 Show Stats"):
     try:
-        conn = sqlite3.connect("C:/Users/mmdee/OneDrive/Desktop/Data Science/projects/foodtolappv1/backend/meal_logs.db")
+        DB_PATH = os.path.join(os.path.dirname(__file__), "meal_logs.db")
+        conn = sqlite3.connect(DB_PATH)
         df_log = pd.read_sql_query("SELECT * FROM meal_logs", conn)
         conn.close()
 
@@ -107,3 +110,29 @@ if st.button("📊 Show Stats"):
             st.info("📭 No data yet. Log a meal first.")
     except Exception as e:
         st.error(f"Failed to load or plot data: {e}")
+
+# Personalized trigger suggestion
+st.subheader("3. Personalized Triggers (Beta)")
+if st.button("💡 Analyze My Triggers"):
+    try:
+        DB_PATH = os.path.join(os.path.dirname(__file__), "meal_logs.db")
+        conn = sqlite3.connect(DB_PATH)
+        df = pd.read_sql_query("SELECT * FROM meal_logs WHERE user_id = ?", conn, params=(user_id,))
+        conn.close()
+
+        st.markdown(f"Showing results for **user: {user_id}**")
+        if df.empty:
+            st.warning("No data found for this user.")
+        else:
+            for symptom in ["Bloating", "Abdominal_Pain", "Diarrhea", "Constipation"]:
+                symptom_df = df[df[symptom] == "Likely"]
+                all_symptom_triggers = symptom_df[f"{symptom}_Triggers"].dropna().tolist()
+                all_symptom_triggers = [i.strip() for sublist in all_symptom_triggers for i in sublist.split(",") if i.strip()]
+                if all_symptom_triggers:
+                    counts = pd.Series(all_symptom_triggers).value_counts()
+                    st.markdown(f"#### Top triggers for {symptom.replace('_', ' ')}")
+                    st.bar_chart(counts.head(10))
+                else:
+                    st.info(f"No trigger patterns found yet for {symptom.replace('_', ' ')}.")
+    except Exception as e:
+        st.error(f"Failed to generate personalized triggers: {e}")
